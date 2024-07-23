@@ -56,23 +56,26 @@ find_rpm() {
   
     searched_rpm=$1 
     
-    mount_dir="/root/mktest/iso_folder/iso"  
+    mount_dir=$2  
    
-    rpm_files=($(find "$mount_dir" -type f -name "*$searched_rpm*.rpm" | head -n 30))
-    
-    echo "RPM files in the ISO containing the term \"$searched_rpm\":"
   
+     rpm_files=($(find "$mount_dir" -type f -name "*.rpm" | grep "$searched_rpm" | head -n 0))
+    
+    
+    
+    if [ -n "$rpm_files" ]; then  
+    
+    echo "RPM files containing the term \"$searched_rpm\" were found in the ISO:"
+    echo ""
+      
     for i in "${!rpm_files[@]}"; do
         echo "$((i+1)). ${rpm_files[i]}"
     done
     
-    echo "Enter the number of the RPM file you want to view details for:"
-    read index 
-    
-    rpm_file=${rpm_files[$index-1]} 
-    output=$(rpm -qip "$rpm_file")
- 
-    echo -e "$rpm_file \n$output"
+    else
+        echo "No RPM files in the ISO containing the term \"$searched_rpm\" were found."
+    fi    
+   
 }
 
 
@@ -81,14 +84,14 @@ search_rpm() {
     mount_dir=$2
 
     while IFS= read -r line; do
-        # skip empty lines
-        if [ -z "$line" ]; then
-            continue
-        fi
 
         trimmed_line=$(echo "$line" | tr -d '[:space:]')
-    #    echo "trimmed_line: $trimmed_string"
+        #echo "trimmed_line: $trimmed_string"
         
+        # skip empty lines
+        if [ -z "$trimmed_line" ]; then
+            continue
+        fi
        
         rpm_file=$(find "$mount_dir" -type f -name "$trimmed_line")
 
@@ -101,24 +104,47 @@ search_rpm() {
     
 }
 
+help() {
+
+  echo "Usage:"
+    echo "  ./script_name.sh <command> [arguments]"
+    echo
+    echo "Commands:"
+    echo "  mount_iso <iso_file> <mount_dir>      Mount the specified ISO file to the specified directory."
+    echo "  umount_iso <mount_dir>                Unmount the ISO file from the specified directory."
+    echo "  list_rpm <mount_dir>                  List the first 30 RPM files in the specified mount directory and display information about a selected RPM file."
+    echo "  find_rpm <term> <mount_dir>           Find the first 30 RPM files in the specified mount directory that contain the specified term."
+    echo "  search_rpm <file> <mount_dir>         Search for RPM files listed in the specified file within the specified mount directory."
+    echo "  help                                  Display this help message."  
+
+}
+
+# Check if a command is provided
+if [ $# -lt 1 ]; then
+    help
+    exit 1
+fi
 
 # main script
-if [ "$1" == "mount" ]
+if [ "$1" == "--mount" ]
  then
     mount_iso "$2" "$3"
-elif [ "$1" == "umount" ]
+elif [ "$1" == "--umount" ]
  then
     umount_iso "$2"
-elif [ "$1" == "find" ]
+elif [ "$1" == "--find" ]
  then
-    find_rpm "$2"    
-elif [ "$1" == "list" ]
+    find_rpm "$2" "$3"   
+elif [ "$1" == "--list" ]
  then
     list_rpm "$2"
-elif [ "$1" == "search" ]
+elif [ "$1" == "--search" ]
  then
     search_rpm "$2" "$3"
+elif [ "$1" == "--help"]
+ then
+  help     
 else
-    echo "Usage: $0 [mount iso_file mount_dir |umount mount_dir|list mount_dir|search rpm_file mount_dir]"
+  help
     exit 1
 fi
